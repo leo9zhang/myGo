@@ -3,11 +3,11 @@ package core
 import (
 	"flag"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
+	"github.com/spf13/viper"
+	"myGo/global"
 	"os"
 	"path/filepath"
-	"time"
-
-	"github.com/spf13/viper"
 )
 
 const (
@@ -57,8 +57,5 @@ func Viper(path ...string) *viper.Viper {
 	// root 适配性
 	// 根据root位置去找到对应迁移位置,保证root路径有效
 	global.GVA_CONFIG.AutoCode.Root, _ = filepath.Abs("..")
-	global.BlackCache = local_cache.NewCache(
-		local_cache.SetDefaultExpire(time.Second * time.Duration(global.GVA_CONFIG.JWT.ExpiresTime)),
-	)
 	return v
 }
