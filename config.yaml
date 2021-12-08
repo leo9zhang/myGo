@@ -1,19 +1,31 @@
 # redis configuration
 redis:
   db: 0
-  addr: '127.0.0.1:6379'
-  password: ''
+  addr: '127.0.0.1:6378'
+  password: '123456'
 
 # mysql connect configuration
-# 未初始化之前请勿手动修改数据库信息！！！如果一定要手动初始化请看（https://www.github.com/flipped-aurora/gin-vue-admin/server.com/docs/first）
 mysql:
-  path: ''
-  port: ''
+  path: '127.0.0.1'
+  port: '3306'
   config: ''
-  db-name: ''
-  username: ''
-  password: ''
+  db-name: 'test'
+  username: 'root'
+  password: '123456'
   max-idle-conns: 10
   max-open-conns: 100
-  log-mode: ""
-  log-zap: false
+
+system:
+  env: 'develop'
+  addr: 8888
+  db-type: 'mysql'
+
+zap:
+  level: 'info'
+  format: 'console'
+  prefix: '[test]'
+  director: 'log'
+  show-line: true
+  encode-level: 'LowercaseColorLevelEncoder'
+  stacktrace-key: 'stacktrace'
+  log-in-console: true
