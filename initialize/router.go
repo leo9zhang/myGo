@@ -3,6 +3,7 @@ package initialize
 import (
 	"github.com/gin-gonic/gin"
 	"myGo/global"
+	"myGo/router"
 )
 
 func Routers() *gin.Engine {
@@ -13,6 +14,8 @@ func Routers() *gin.Engine {
 	//Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	//global.GVA_LOG.Info("register swagger handler")
 
+	// 获取路由实例
+	customerRouter := router.RouterGroup
 	PublicGroup := Router.Group("")
 	{
 		PublicGroup.GET("/health", func(c *gin.Context) {
