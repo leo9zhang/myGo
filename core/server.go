@@ -14,11 +14,11 @@ type server interface {
 
 func RunServer() {
 	Router := initialize.Routers()
-	address := fmt.Sprintf(":%d", global.GVA_CONFIG.System.Addr)
+	address := fmt.Sprintf(":%d", global.ServerConfig.System.Addr)
 	s := initServer(address, Router)
 
 	time.Sleep(10 * time.Microsecond)
-	global.GVA_LOG.Info("server run success on ", zap.String("address", address))
+	global.Logger.Info("server run success on ", zap.String("address", address))
 
-	global.GVA_LOG.Error(s.ListenAndServe().Error())
+	global.Logger.Error(s.ListenAndServe().Error())
 }

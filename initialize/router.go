@@ -2,6 +2,8 @@ package initialize
 
 import (
 	"github.com/gin-gonic/gin"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/gin-swagger/swaggerFiles"
 	"myGo/global"
 	"myGo/router"
 )
@@ -9,10 +11,11 @@ import (
 func Routers() *gin.Engine {
 	var Router = gin.Default()
 
-	global.GVA_LOG.Info("use middleware logger")
-
-	//Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	//global.GVA_LOG.Info("register swagger handler")
+	Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	//ginSwagger.WrapHandler(swaggerFiles.Handler,
+	//	ginSwagger.URL("http://localhost:8888/swagger/doc.json"),
+	//	ginSwagger.DefaultModelsExpandDepth(-1))
+	//global.Logger.Info("register swagger handle")
 
 	// 获取路由实例
 	customerRouter := router.RouterGroupApp.Customer
@@ -26,6 +29,6 @@ func Routers() *gin.Engine {
 	{
 		customerRouter.InitCustomerRouter(PrivateGroup)
 	}
-	global.GVA_LOG.Info("router register success")
+	global.Logger.Info("router register success")
 	return Router
 }

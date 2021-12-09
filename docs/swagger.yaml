@@ -1,0 +1,135 @@
+definitions:
+  customer.Customer:
+    properties:
+      createdTime:
+        type: string
+      customerName:
+        description: 客户名
+        type: string
+      customerPhoneData:
+        description: 客户手机号
+        type: string
+      id:
+        type: integer
+      updateTime:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /customer/customer:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: 客户ID
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/customer.Customer'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"success":true,"data":{},"msg":"删除成功"}'
+          schema:
+            type: string
+      summary: 删除客户
+      tags:
+      - Customer
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - in: query
+        name: createdTime
+        type: string
+      - description: 客户名
+        in: query
+        name: customerName
+        type: string
+      - description: 客户手机号
+        in: query
+        name: customerPhoneData
+        type: string
+      - in: query
+        name: id
+        type: integer
+      - in: query
+        name: updateTime
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"success":true,"data":{},"msg":"获取成功"}'
+          schema:
+            type: string
+      summary: 获取单一客户信息
+      tags:
+      - Customer
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 客户用户名, 客户手机号码
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/customer.Customer'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"success":true,"data":{},"msg":"创建成功"}'
+          schema:
+            type: string
+      summary: 创建客户
+      tags:
+      - Customer
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 客户ID, 客户信息
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/customer.Customer'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"success":true,"data":{},"msg":"更新成功"}'
+          schema:
+            type: string
+      summary: 更新客户信息
+      tags:
+      - Customer
+  /customerRouter/customerList:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页大小
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"success":true,"data":{},"msg":"获取成功"}'
+          schema:
+            type: string
+      summary: 分页获取权限客户列表
+      tags:
+      - Customer
+swagger: "2.0"

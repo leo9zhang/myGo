@@ -10,7 +10,7 @@ import (
 )
 
 func Gorm() *gorm.DB {
-	switch global.GVA_CONFIG.System.DbType {
+	switch global.ServerConfig.System.DbType {
 	case "mysql":
 		return GormMysql()
 	case "pgsql":
@@ -22,7 +22,7 @@ func Gorm() *gorm.DB {
 }
 
 func GormMysql() *gorm.DB {
-	m := global.GVA_CONFIG.Mysql
+	m := global.ServerConfig.Mysql
 	if m.Dbname == "" {
 		return nil
 	}
@@ -53,8 +53,8 @@ func RegisterTables(db *gorm.DB) {
 		customer.Customer{},
 	)
 	if err != nil {
-		global.GVA_LOG.Error("register table failed", zap.Error(err))
+		global.Logger.Error("register table failed", zap.Error(err))
 		os.Exit(0)
 	}
-	global.GVA_LOG.Info("register table success")
+	global.Logger.Info("register table success")
 }
