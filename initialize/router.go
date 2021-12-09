@@ -15,14 +15,17 @@ func Routers() *gin.Engine {
 	//global.GVA_LOG.Info("register swagger handler")
 
 	// 获取路由实例
-	customerRouter := router.RouterGroup
+	customerRouter := router.RouterGroupApp.Customer
 	PublicGroup := Router.Group("")
 	{
 		PublicGroup.GET("/health", func(c *gin.Context) {
 			c.JSON(200, "ok")
 		})
 	}
-
+	PrivateGroup := Router.Group("")
+	{
+		customerRouter.InitCustomerRouter(PrivateGroup)
+	}
 	global.GVA_LOG.Info("router register success")
 	return Router
 }

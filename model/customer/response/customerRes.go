@@ -3,5 +3,5 @@ package response
 import "myGo/model/customer"
 
 type CustomerResponse struct {
-	Customer customer.Customer `json:"customerRouter"`
+	Customer customer.Customer `json:"customer"`
 }

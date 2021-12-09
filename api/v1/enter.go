@@ -5,7 +5,7 @@ import (
 )
 
 type ApiGroup struct {
-	apiCustomer.CustomerApi
+	CustomerApiGroup apiCustomer.CustomerApi
 }
 
 var ApiGroupApp = new(ApiGroup)

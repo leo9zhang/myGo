@@ -4,12 +4,15 @@ import (
 	"myGo/common/request"
 	"myGo/global"
 	"myGo/model/customer"
+	"time"
 )
 
 type CustomerService struct {
 }
 
 func (exa *CustomerService) CreateExaCustomer(e customer.Customer) (err error) {
+	e.CreatedTime = time.Now()
+	e.UpdateTime = time.Now()
 	err = global.GVA_DB.Create(&e).Error
 	return err
 }

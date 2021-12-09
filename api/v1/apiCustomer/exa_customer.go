@@ -7,6 +7,7 @@ import (
 	"myGo/common/response"
 	"myGo/global"
 	"myGo/model/customer"
+	customerRes "myGo/model/customer/response"
 	"myGo/utils"
 )
 
@@ -22,12 +23,12 @@ func (e *CustomerApi) CreateExaCustomer(c *gin.Context) {
 	}
 	//customerRouter.SysUserID = utils.GetUserID(c)
 	//customerRouter.SysUserAuthorityID = utils.GetUserAuthorityId(c)
-	//if err := customerService.CreateExaCustomer(customerRouter); err != nil {
-	//	global.GVA_LOG.Error("创建失败!", zap.Error(err))
-	//	response.FailWithMessage("创建失败", c)
-	//} else {
-	//	response.OkWithMessage("创建成功", c)
-	//}
+	if err := customerService.CreateExaCustomer(customer); err != nil {
+		global.GVA_LOG.Error("创建失败!", zap.Error(err))
+		response.FailWithMessage("创建失败", c)
+	} else {
+		response.OkWithMessage("创建成功", c)
+	}
 }
 
 func (e *CustomerApi) DeleteExaCustomer(c *gin.Context) {
@@ -71,13 +72,13 @@ func (e *CustomerApi) GetExaCustomer(c *gin.Context) {
 		response.FailWithMessage(err.Error(), c)
 		return
 	}
-	//err, data := customerService.GetExaCustomer(customerRouter.ID)
-	//if err != nil {
-	//	global.GVA_LOG.Error("获取失败!", zap.Error(err))
-	//	response.FailWithMessage("获取失败", c)
-	//} else {
-	//	response.OkWithDetailed(consumer.CustomerResponse{Customer: data}, "获取成功", c)
-	//}
+	err, data := customerService.GetExaCustomer(customer.ID)
+	if err != nil {
+		global.GVA_LOG.Error("获取失败!", zap.Error(err))
+		response.FailWithMessage("获取失败", c)
+	} else {
+		response.OkWithDetailed(customerRes.CustomerResponse{Customer: data}, "获取成功", c)
+	}
 }
 
 func (e *CustomerApi) GetExaCustomerList(c *gin.Context) {

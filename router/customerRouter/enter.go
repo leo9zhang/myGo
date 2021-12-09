@@ -1,5 +1,5 @@
 package customerRouter
 
-type ServiceGroup struct {
-	CustomerService
+type RouterGroup struct {
+	CustomerRouter
 }
