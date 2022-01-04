@@ -256,3 +256,714 @@ func (h *ConsistentHash) Get(v interface{}) (interface{}, bool) {
 ```
 ### 项目
 `https://github.com/zeromicro/go-zero`
+
+#### 环境搭建
+
+#### 服务
+
+##### 用户服务（user）
+##### 1. 生成user model模型
+`cd mall/service/user`
+- 创建sql文件 `vim model/user.sql`
+- 编写 sql 文件
+```sql
+CREATE TABLE `user` (
+	`id` bigint unsigned NOT NULL AUTO_INCREMENT,
+	`name` varchar(255)  NOT NULL DEFAULT '' COMMENT '用户姓名',
+	`gender` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT '用户性别',
+	`mobile` varchar(255)  NOT NULL DEFAULT '' COMMENT '用户电话',
+	`password` varchar(255)  NOT NULL DEFAULT '' COMMENT '用户密码',
+	`create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+	`update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY `idx_mobile_unique` (`mobile`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4;
+
+```
+- 运行模板生成命令 `goctl model mysql ddl -src ./model/user.sql -dir ./model -c`
+
+##### 2. 生成user api 服务
+- 创建 api 文件 `vim api/user.api`
+- 编写 api 文件
+```api
+type (
+	// 用户登录
+	LoginRequest {
+		Mobile   string `json:"mobile"`
+		Password string `json:"password"`
+	}
+	LoginResponse {
+		AccessToken  string `json:"accessToken"`
+		AccessExpire int64  `json:"accessExpire"`
+	}
+	// 用户登录
+
+	// 用户注册
+	RegisterRequest {
+		Name     string `json:"name"`
+		Gender   int64  `json:"gender"`
+		Mobile   string `json:"mobile"`
+		Password string `json:"password"`
+	}
+	RegisterResponse {
+		Id     int64  `json:"id"`
+		Name   string `json:"name"`
+		Gender int64  `json:"gender"`
+		Mobile string `json:"mobile"`
+	}
+	// 用户注册
+
+	// 用户信息
+	UserInfoResponse {
+		Id     int64  `json:"id"`
+		Name   string `json:"name"`
+		Gender int64  `json:"gender"`
+		Mobile string `json:"mobile"`
+	}
+	// 用户信息
+)
+
+service User {
+	@handler Login
+	post /api/user/login(LoginRequest) returns (LoginResponse)
+	
+	@handler Register
+	post /api/user/register(RegisterRequest) returns (RegisterResponse)
+}
+
+@server(
+	jwt: Auth
+)
+service User {
+	@handler UserInfo
+	post /api/user/userinfo() returns (UserInfoResponse)
+}
+
+```
+- 运行模板生成命令 `goctl api go -api ./api/user.api -dir ./api`
+
+##### 3. 生成user rpc 服务
+- 创建 proto 文件 `vim rpc/user.proto`
+- 编写 proto 文件
+```protobuf
+syntax = "proto3";
+
+package userclient;
+
+option go_package = "user";
+
+// 用户登录
+message LoginRequest {
+    string Mobile = 1;
+    string Password = 2;
+}
+message LoginResponse {
+    int64 Id = 1;
+    string Name = 2;
+    int64 Gender = 3;
+    string Mobile = 4;
+}
+// 用户登录
+
+// 用户注册
+message RegisterRequest {
+    string Name = 1;
+    int64 Gender = 2;
+    string Mobile = 3;
+    string Password = 4;
+}
+message RegisterResponse {
+    int64 Id = 1;
+    string Name = 2;
+    int64 Gender = 3;
+    string Mobile = 4;
+}
+// 用户注册
+
+// 用户信息
+message UserInfoRequest {
+    int64 Id = 1;
+}
+message UserInfoResponse {
+    int64 Id = 1;
+    string Name = 2;
+    int64 Gender = 3;
+    string Mobile = 4;
+}
+// 用户信息
+
+service User {
+    rpc Login(LoginRequest) returns(LoginResponse);
+    rpc Register(RegisterRequest) returns(RegisterResponse);
+    rpc UserInfo(UserInfoRequest) returns(UserInfoResponse);
+}
+
+```
+- 运行模板生成命令 `goctl rpc proto -src ./rpc/user.proto -dir ./rpc`
+- 添加下载依赖包
+  回到 mall 项目根目录执行如下命令： `go mod tidy`
+
+##### 4. 编写 user rpc 服务
+
+###### 4.1 修改配置文件
+- 修改 user.yaml 配置文件 `vim rpc/etc/user.yaml`
+```yaml
+Name: user.rpc
+ListenOn: 0.0.0.0:9000
+
+Etcd:
+  Hosts:
+    - etcd:2379
+  Key: user.rpc
+
+Mysql:
+  DataSource: root:123456@tcp(mysql:3306)/mall?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+
+CacheRedis:
+  - Host: redis:6379
+    Type: node
+    Pass:
+
+```
+
+###### 4.2 添加 user model 依赖
+- 添加 Mysql 服务配置，CacheRedis 服务配置的实例化 `vim rpc/internal/config/config.go`
+```go
+package config
+
+import (
+	"github.com/tal-tech/go-zero/core/stores/cache"
+	"github.com/tal-tech/go-zero/zrpc"
+)
+
+type Config struct {
+	zrpc.RpcServerConf
+
+	Mysql struct {
+		DataSource string
+	}
+  
+	CacheRedis cache.CacheConf
+}
+
+```
+- 注册服务上下文 user model 的依赖 `vim rpc/internal/svc/servicecontext.go`
+```go
+package svc
+
+import (
+	"mall/service/user/model"
+	"mall/service/user/rpc/internal/config"
+
+	"github.com/tal-tech/go-zero/core/stores/sqlx"
+)
+
+type ServiceContext struct {
+	Config config.Config
+    
+	UserModel model.UserModel
+}
+
+func NewServiceContext(c config.Config) *ServiceContext {
+	conn := sqlx.NewMysql(c.Mysql.DataSource)
+	return &ServiceContext{
+		Config:    c,
+		UserModel: model.NewUserModel(conn, c.CacheRedis),
+	}
+}
+
+```
+###### 4.3 添加用户注册逻辑 Register
+- 添加密码加密工具 
+  在根目录 common 新建 crypt 工具库 `vim common/cryptx/crypt.go`
+```go
+package cryptx
+
+import (
+	"fmt"
+
+	"golang.org/x/crypto/scrypt"
+)
+
+func PasswordEncrypt(salt, password string) string {
+	dk, _ := scrypt.Key([]byte(password), []byte(salt), 32768, 8, 1, 32)
+	return fmt.Sprintf("%x", string(dk))
+}
+
+```
+- 添加密码加密 Salt 配置 `vim rpc/etc/user.yaml`
+```yaml
+Name: user.rpc
+ListenOn: 0.0.0.0:9000
+
+......
+
+Salt: HWVOFkGgPTryzICwd7qnJaZR9KQ2i8xe
+
+```
+
+- `vim rpc/internal/config/config.go`
+```go
+package config
+
+import (
+	"github.com/tal-tech/go-zero/core/stores/cache"
+	"github.com/tal-tech/go-zero/zrpc"
+)
+
+type Config struct {
+        ......
+	Salt string
+}
+
+```
+- 添加用户注册逻辑 `vim rpc/internal/logic/registerlogic.go`
+```go
+package logic
+
+import (
+	"context"
+
+	"mall/common/cryptx"
+	"mall/service/user/model"
+	"mall/service/user/rpc/internal/svc"
+	"mall/service/user/rpc/user"
+
+	"github.com/tal-tech/go-zero/core/logx"
+	"google.golang.org/grpc/status"
+)
+
+type RegisterLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) *RegisterLogic {
+	return &RegisterLogic{
+		ctx:    ctx,
+		svcCtx: svcCtx,
+		Logger: logx.WithContext(ctx),
+	}
+}
+
+func (l *RegisterLogic) Register(in *user.RegisterRequest) (*user.RegisterResponse, error) {
+	// 判断手机号是否已经注册
+	_, err := l.svcCtx.UserModel.FindOneByMobile(in.Mobile)
+	if err == nil {
+		return nil, status.Error(100, "该用户已存在")
+	}
+
+	if err == model.ErrNotFound {
+
+		newUser := model.User{
+			Name:     in.Name,
+			Gender:   in.Gender,
+			Mobile:   in.Mobile,
+			Password: cryptx.PasswordEncrypt(l.svcCtx.Config.Salt, in.Password),
+		}
+
+		res, err := l.svcCtx.UserModel.Insert(&newUser)
+		if err != nil {
+			return nil, status.Error(500, err.Error())
+		}
+
+		newUser.Id, err = res.LastInsertId()
+		if err != nil {
+			return nil, status.Error(500, err.Error())
+		}
+
+		return &user.RegisterResponse{
+			Id:     newUser.Id,
+			Name:   newUser.Name,
+			Gender: newUser.Gender,
+			Mobile: newUser.Mobile,
+		}, nil
+
+	}
+
+	return nil, status.Error(500, err.Error())
+}
+
+```
+
+###### 4.4 添加用户登录逻辑 Login `vim rpc/internal/logic/loginlogic.go`
+
+```go
+package logic
+
+import (
+	"context"
+
+	"mall/common/cryptx"
+	"mall/service/user/model"
+	"mall/service/user/rpc/internal/svc"
+	"mall/service/user/rpc/user"
+
+	"github.com/tal-tech/go-zero/core/logx"
+	"google.golang.org/grpc/status"
+)
+
+type LoginLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) *LoginLogic {
+	return &LoginLogic{
+		ctx:    ctx,
+		svcCtx: svcCtx,
+		Logger: logx.WithContext(ctx),
+	}
+}
+
+func (l *LoginLogic) Login(in *user.LoginRequest) (*user.LoginResponse, error) {
+	// 查询用户是否存在
+	res, err := l.svcCtx.UserModel.FindOneByMobile(in.Mobile)
+	if err != nil {
+		if err == model.ErrNotFound {
+			return nil, status.Error(100, "用户不存在")
+		}
+		return nil, status.Error(500, err.Error())
+	}
+
+	// 判断密码是否正确
+	password := cryptx.PasswordEncrypt(l.svcCtx.Config.Salt, in.Password)
+	if password != res.Password {
+		return nil, status.Error(100, "密码错误")
+	}
+
+	return &user.LoginResponse{
+		Id:     res.Id,
+		Name:   res.Name,
+		Gender: res.Gender,
+		Mobile: res.Mobile,
+	}, nil
+}
+
+```
+
+###### 4.5 添加用户信息逻辑 UserInfo `vim rpc/internal/logic/userinfologic.go`
+```go
+package logic
+
+import (
+	"context"
+
+	"mall/service/user/model"
+	"mall/service/user/rpc/internal/svc"
+	"mall/service/user/rpc/user"
+
+	"github.com/tal-tech/go-zero/core/logx"
+	"google.golang.org/grpc/status"
+)
+
+type UserInfoLogic struct {
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+	logx.Logger
+}
+
+func NewUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserInfoLogic {
+	return &UserInfoLogic{
+		ctx:    ctx,
+		svcCtx: svcCtx,
+		Logger: logx.WithContext(ctx),
+	}
+}
+
+func (l *UserInfoLogic) UserInfo(in *user.UserInfoRequest) (*user.UserInfoResponse, error) {
+	// 查询用户是否存在
+	res, err := l.svcCtx.UserModel.FindOne(in.Id)
+	if err != nil {
+		if err == model.ErrNotFound {
+			return nil, status.Error(100, "用户不存在")
+		}
+		return nil, status.Error(500, err.Error())
+	}
+
+	return &user.UserInfoResponse{
+		Id:     res.Id,
+		Name:   res.Name,
+		Gender: res.Gender,
+		Mobile: res.Mobile,
+	}, nil
+}
+
+```
+
+##### 5. 编写 user api 服务
+
+###### 5.1 修改配置文件 vim api/etc/user.yaml`
+修改服务地址，端口号为0.0.0.0:8000，Mysql 服务配置，CacheRedis 服务配置，Auth 验证配置
+
+```yaml
+Name: User
+Host: 0.0.0.0
+Port: 8000
+
+Mysql:
+  DataSource: root:123456@tcp(mysql:3306)/mall?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+
+CacheRedis:
+- Host: redis:6379
+  Pass:
+  Type: node
+
+Auth:
+  AccessSecret: uOvKLmVfztaXGpNYd4Z0I1SiT7MweJhl
+  AccessExpire: 86400
+
+```
+###### 5.2 添加 user rpc 依赖
+- 添加 user rpc 服务配置 `vim api/etc/user.yaml`
+```yaml
+Name: User
+Host: 0.0.0.0
+Port: 8000
+
+......
+
+UserRpc:
+  Etcd:
+    Hosts:
+    - etcd:2379
+    Key: user.rpc
+
+```
+- 添加 user rpc 服务配置的实例化 `vim api/internal/config/config.go`
+```go
+package config
+
+import (
+	"github.com/tal-tech/go-zero/rest"
+	"github.com/tal-tech/go-zero/zrpc"
+)
+
+type Config struct {
+	rest.RestConf
+
+	Auth struct {
+		AccessSecret string
+		AccessExpire int64
+	}
+
+	UserRpc zrpc.RpcClientConf
+}
+
+```
+- 注册服务上下文 user rpc 的依赖 `vim api/internal/svc/servicecontext.go`
+```go
+package svc
+
+import (
+	"mall/service/user/api/internal/config"
+	"mall/service/user/rpc/userclient"
+
+	"github.com/tal-tech/go-zero/zrpc"
+)
+
+type ServiceContext struct {
+	Config config.Config
+    
+	UserRpc userclient.User
+}
+
+func NewServiceContext(c config.Config) *ServiceContext {
+	return &ServiceContext{
+		Config:  c,
+		UserRpc: userclient.NewUser(zrpc.MustNewClient(c.UserRpc)),
+	}
+}
+
+```
+
+###### 5.3  添加用户注册逻辑 Register `vim api/internal/logic/registerlogic.go`
+```go
+package logic
+
+import (
+	"context"
+
+	"mall/service/user/api/internal/svc"
+	"mall/service/user/api/internal/types"
+	"mall/service/user/rpc/userclient"
+
+	"github.com/tal-tech/go-zero/core/logx"
+)
+
+type RegisterLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+func NewRegisterLogic(ctx context.Context, svcCtx *svc.ServiceContext) RegisterLogic {
+	return RegisterLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *RegisterLogic) Register(req types.RegisterRequest) (resp *types.RegisterResponse, err error) {
+	res, err := l.svcCtx.UserRpc.Register(l.ctx, &userclient.RegisterRequest{
+		Name:     req.Name,
+		Gender:   req.Gender,
+		Mobile:   req.Mobile,
+		Password: req.Password,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.RegisterResponse{
+		Id:     res.Id,
+		Name:   res.Name,
+		Gender: res.Gender,
+		Mobile: res.Mobile,
+	}, nil
+}
+
+```
+###### 5.4 添加用户登录逻辑 Login
+- 添加 JWT 工具
+  在根目录 common 新建 jwtx 工具库 `vim common/jwtx/jwt.go`
+  
+```go
+package jwtx
+
+import "github.com/golang-jwt/jwt"
+
+func GetToken(secretKey string, iat, seconds, uid int64) (string, error) {
+	claims := make(jwt.MapClaims)
+	claims["exp"] = iat + seconds
+	claims["iat"] = iat
+	claims["uid"] = uid
+	token := jwt.New(jwt.SigningMethodHS256)
+	token.Claims = claims
+	return token.SignedString([]byte(secretKey))
+}
+
+```
+
+- 添加用户登录逻辑 `vim api/internal/logic/loginlogic.go`
+
+```go
+package logic
+
+import (
+	"context"
+	"time"
+
+	"mall/common/jwtx"
+	"mall/service/user/api/internal/svc"
+	"mall/service/user/api/internal/types"
+	"mall/service/user/rpc/userclient"
+
+	"github.com/tal-tech/go-zero/core/logx"
+)
+
+type LoginLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+func NewLoginLogic(ctx context.Context, svcCtx *svc.ServiceContext) LoginLogic {
+	return LoginLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *LoginLogic) Login(req types.LoginRequest) (resp *types.LoginResponse, err error) {
+	res, err := l.svcCtx.UserRpc.Login(l.ctx, &userclient.LoginRequest{
+		Mobile:   req.Mobile,
+		Password: req.Password,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now().Unix()
+	accessExpire := l.svcCtx.Config.Auth.AccessExpire
+
+	accessToken, err := jwtx.GetToken(l.svcCtx.Config.Auth.AccessSecret, now, accessExpire, res.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.LoginResponse{
+		AccessToken:  accessToken,
+		AccessExpire: now + accessExpire,
+	}, nil
+}
+
+```
+
+###### 5.5 添加用户信息逻辑 UserInfo `vim api/internal/logic/userinfologic.go`
+
+```go
+package logic
+
+import (
+	"context"
+	"encoding/json"
+
+	"mall/service/user/api/internal/svc"
+	"mall/service/user/api/internal/types"
+	"mall/service/user/rpc/userclient"
+
+	"github.com/tal-tech/go-zero/core/logx"
+)
+
+type UserInfoLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+func NewUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) UserInfoLogic {
+	return UserInfoLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *UserInfoLogic) UserInfo() (resp *types.UserInfoResponse, err error) {
+	uid, _ := l.ctx.Value("uid").(json.Number).Int64()
+	res, err := l.svcCtx.UserRpc.UserInfo(l.ctx, &userclient.UserInfoRequest{
+		Id: uid,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.UserInfoResponse{
+		Id:     res.Id,
+		Name:   res.Name,
+		Gender: res.Gender,
+		Mobile: res.Mobile,
+	}, nil
+}
+
+```
+
+##### 6. 启动 user rpc 服务
+启动服务需要在 golang 容器中启动
+```
+ cd mall/service/user/rpc
+ go run user.go -f etc/user.yaml
+Starting rpc server at 127.0.0.1:9000...
+
+```
+##### 7. 启动 user api 服务
+```
+cd mall/service/user/api
+ go run user.go -f etc/user.yaml
+Starting server at 0.0.0.0:8000...
+```
