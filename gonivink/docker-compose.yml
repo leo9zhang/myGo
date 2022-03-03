@@ -1,0 +1,29 @@
+version: '1.0'
+# 网络配置
+networks:
+  backend:
+    driver: ${NETWORKS_DRIVER}
+
+# 服务容器配置
+services:
+  golang:
+    build:
+      context: ./golang # 指定构建使用的Dockerfile
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${CODE_PATH_HOST}:/usr/src/code # 引用 .env 配置中 CODE_PATH_HOST 变量，将宿主机上代码存放的目录挂载到容器中 /usr/src/code 目录
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+      - "8003:8003"
+      - "9000:9000"
+      - "9001:9001"
+      - "9002:9002"
+      - "9003:9003"
+    stdin_open: true
+    tty: true
+    networks:
+      - backend
+    restart: always  # 指定容器退出后的重启策略为始终重启
