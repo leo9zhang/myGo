@@ -1,3 +1,3 @@
-FROM yedf/dtm
+FROM evildecay/etcdkeeper
 
 LABEL maintainer="Leo <leospzhang@gmail.com>"
