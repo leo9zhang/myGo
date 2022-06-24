@@ -16,9 +16,8 @@ require (
 	github.com/swaggo/gin-swagger v1.3.3
 	github.com/swaggo/swag v1.7.6
 	github.com/tal-tech/go-zero v1.2.4
+	github.com/xuri/excelize/v2 v2.6.0 // indirect
 	go.uber.org/zap v1.17.0
-	golang.org/x/net v0.0.0-20211208012354-db4efeb81f4b // indirect
-	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 	golang.org/x/time v0.0.0-20211116232009-f0f3c7e86c11
 	golang.org/x/tools v0.1.8 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect

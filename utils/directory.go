@@ -1,18 +1,16 @@
 package utils
 
 import (
-	"myGo/global"
 	"os"
-
-	"go.uber.org/zap"
 )
 
-//@author: [piexlmax](https://github.com/piexlmax)
-//@function: PathExists
-//@description: 文件目录是否存在
-//@param: path string
-//@return: bool, error
+// @author: [piexlmax](https://github.com/piexlmax)
+// @function: PathExists
+// @description: 文件目录是否存在
+// @param: path string
+// @return: bool, error
 
+// PathExists TODO
 func PathExists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -24,12 +22,13 @@ func PathExists(path string) (bool, error) {
 	return false, err
 }
 
-//@author: [piexlmax](https://github.com/piexlmax)
-//@function: CreateDir
-//@description: 批量创建文件夹
-//@param: dirs ...string
-//@return: err error
+// @author: [piexlmax](https://github.com/piexlmax)
+// @function: CreateDir
+// @description: 批量创建文件夹
+// @param: dirs ...string
+// @return: err error
 
+// CreateDir TODO
 func CreateDir(dirs ...string) (err error) {
 	for _, v := range dirs {
 		exist, err := PathExists(v)
@@ -37,9 +36,9 @@ func CreateDir(dirs ...string) (err error) {
 			return err
 		}
 		if !exist {
-			global.Logger.Debug("create directory" + v)
+			// global.Logger.Debug("create directory" + v)
 			if err := os.MkdirAll(v, os.ModePerm); err != nil {
-				global.Logger.Error("create directory"+v, zap.Any(" error:", err))
+				// global.Logger.Error("create directory"+v, zap.Any(" error:", err))
 				return err
 			}
 		}
